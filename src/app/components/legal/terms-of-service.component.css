@@ -1,0 +1,37 @@
+/* Reuse the same styles as privacy policy for consistency */
+@import './privacy-policy.component.css';
+
+.acknowledgment {
+  background: #fff3cd;
+  padding: 30px;
+  border-radius: 8px;
+  border: 3px solid #ffc107;
+  margin: 30px 0;
+  text-align: center;
+}
+
+.acknowledgment h2 {
+  color: #856404;
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.acknowledgment p {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #856404;
+  margin: 0;
+}
+
+a {
+  color: #4a148c;
+  text-decoration: none;
+  border-bottom: 1px dotted #4a148c;
+}
+
+a:hover {
+  color: #6a1b9a;
+  border-bottom: 1px solid #6a1b9a;
+}

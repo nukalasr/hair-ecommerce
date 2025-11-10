@@ -7,6 +7,9 @@ import { LoginComponent } from './components/auth/login.component';
 import { RegisterComponent } from './components/auth/register.component';
 import { SellerDashboardComponent } from './components/seller-dashboard/seller-dashboard.component';
 import { OrderSuccessComponent } from './components/order-success/order-success.component';
+import { PrivacyPolicyComponent } from './components/legal/privacy-policy.component';
+import { TermsOfServiceComponent } from './components/legal/terms-of-service.component';
+import { RefundPolicyComponent } from './components/legal/refund-policy.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
@@ -33,5 +36,9 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard],
     data: { role: 'seller' }
   },
+  // Legal Pages
+  { path: 'privacy-policy', component: PrivacyPolicyComponent },
+  { path: 'terms-of-service', component: TermsOfServiceComponent },
+  { path: 'refund-policy', component: RefundPolicyComponent },
   { path: '**', redirectTo: '' }
 ];

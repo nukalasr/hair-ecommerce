@@ -1,0 +1,157 @@
+.legal-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  padding: 40px 20px;
+}
+
+.legal-content {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  padding: 60px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  font-size: 2.5em;
+  color: #4a148c;
+  margin-bottom: 10px;
+  border-bottom: 3px solid #4a148c;
+  padding-bottom: 15px;
+}
+
+.last-updated {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 30px;
+  font-style: italic;
+}
+
+section {
+  margin: 40px 0;
+}
+
+h2 {
+  font-size: 1.8em;
+  color: #333;
+  margin: 30px 0 15px 0;
+  padding-top: 20px;
+  border-top: 2px solid #e0e0e0;
+}
+
+section:first-of-type h2 {
+  border-top: none;
+  padding-top: 0;
+}
+
+h3 {
+  font-size: 1.3em;
+  color: #555;
+  margin: 20px 0 10px 0;
+}
+
+p {
+  line-height: 1.8;
+  color: #444;
+  margin: 15px 0;
+}
+
+ul {
+  margin: 15px 0;
+  padding-left: 25px;
+}
+
+li {
+  margin: 10px 0;
+  line-height: 1.7;
+  color: #444;
+}
+
+li strong {
+  color: #4a148c;
+  font-weight: 600;
+}
+
+.warning {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: 4px;
+}
+
+.warning strong {
+  color: #856404;
+}
+
+.contact-info {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  margin: 20px 0;
+}
+
+.contact-info p {
+  margin: 10px 0;
+  color: #333;
+}
+
+.contact-info strong {
+  color: #4a148c;
+}
+
+.gdpr-section,
+.ccpa-section {
+  background: #e3f2fd;
+  padding: 30px;
+  border-radius: 8px;
+  border-left: 5px solid #2196f3;
+  margin: 30px 0;
+}
+
+.gdpr-section h2,
+.ccpa-section h2 {
+  color: #1976d2;
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .legal-content {
+    padding: 30px 20px;
+  }
+
+  h1 {
+    font-size: 2em;
+  }
+
+  h2 {
+    font-size: 1.5em;
+  }
+
+  h3 {
+    font-size: 1.2em;
+  }
+}
+
+@media (max-width: 480px) {
+  .legal-container {
+    padding: 20px 10px;
+  }
+
+  .legal-content {
+    padding: 20px 15px;
+  }
+
+  h1 {
+    font-size: 1.7em;
+  }
+
+  h2 {
+    font-size: 1.3em;
+  }
+}

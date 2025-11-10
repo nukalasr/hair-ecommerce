@@ -1,0 +1,23 @@
+<div class="cookie-banner" *ngIf="showBanner" [@slideUp]>
+  <div class="cookie-content">
+    <div class="cookie-icon">
+      🍪
+    </div>
+    <div class="cookie-text">
+      <h3>We Value Your Privacy</h3>
+      <p>
+        We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic.
+        By clicking "Accept All", you consent to our use of cookies.
+        <a routerLink="/privacy-policy" (click)="closeBanner()">Learn more</a>
+      </p>
+    </div>
+    <div class="cookie-actions">
+      <button class="btn-accept-all" (click)="acceptAll()">
+        Accept All
+      </button>
+      <button class="btn-necessary" (click)="acceptNecessary()">
+        Necessary Only
+      </button>
+    </div>
+  </div>
+</div>

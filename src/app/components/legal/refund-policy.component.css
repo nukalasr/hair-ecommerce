@@ -1,0 +1,54 @@
+/* Reuse base styles */
+@import './privacy-policy.component.css';
+
+.summary-box {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  padding: 30px;
+  border-radius: 12px;
+  border: 2px solid #2196f3;
+  margin: 40px 0;
+}
+
+.summary-box h2 {
+  color: #1976d2;
+  text-align: center;
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+  margin-bottom: 25px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.summary-item {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary-item h3 {
+  color: #4a148c;
+  font-size: 1.1em;
+  margin: 0 0 10px 0;
+  border-bottom: 2px solid #4a148c;
+  padding-bottom: 10px;
+}
+
+.summary-item p {
+  font-weight: 600;
+  color: #333;
+  margin: 10px 0 0 0;
+  font-size: 0.95em;
+}
+
+@media (max-width: 768px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
