@@ -1,0 +1,50 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build outputs
+dist
+.angular
+/tmp
+/out-tsc
+
+# Testing
+coverage
+*.spec.ts
+karma.conf.js
+.karma
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git
+.gitignore
+.github
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Backend (excluded from frontend build)
+backend/
+
+# Logs
+logs
+*.log
