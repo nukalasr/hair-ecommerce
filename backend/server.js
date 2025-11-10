@@ -1,5 +1,32 @@
 const express = require('express');
 const dotenv = require('dotenv');
+
+// Load environment variables FIRST
+dotenv.config();
+
+// Initialize Sentry (must be first, before other imports)
+const Sentry = require('@sentry/node');
+const { ProfilingIntegration } = require('@sentry/profiling-node');
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    integrations: [
+      new ProfilingIntegration(),
+      new Sentry.Integrations.Http({ tracing: true }),
+      new Sentry.Integrations.Express({ app: express() }),
+      new Sentry.Integrations.Mongo(),
+    ],
+    // Performance Monitoring
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    // Profiling
+    profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    // Release tracking
+    release: 'hair-ecommerce-backend@1.0.0',
+  });
+}
+
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -9,14 +36,17 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 const { errorHandler } = require('./middleware/errorHandler');
 
-// Load environment variables
-dotenv.config();
-
 // Connect to database
 connectDB();
 
 // Initialize Express app
 const app = express();
+
+// Sentry request handler (must be first middleware)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
+}
 
 // Rate limiting
 const limiter = rateLimit({
@@ -106,6 +136,16 @@ app.use((req, res) => {
   });
 });
 
+// Sentry error handler (must be before other error handlers)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler({
+    shouldHandleError(error) {
+      // Capture all errors with status 500 or higher
+      return !error.statusCode || error.statusCode >= 500;
+    }
+  }));
+}
+
 // Error handler (must be last)
 app.use(errorHandler);
 
@@ -125,6 +165,9 @@ const server = app.listen(PORT, () => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   console.error('❌ Unhandled Promise Rejection:', err);
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err);
+  }
   // Close server & exit process
   server.close(() => process.exit(1));
 });

@@ -8,6 +8,11 @@ export const environment = {
   // In production, replace with your actual backend API URL
   apiUrl: 'http://localhost:3000/api',
 
+  // Sentry Error Monitoring
+  // Create a project at https://sentry.io and get your DSN
+  // Leave empty to disable Sentry in development
+  sentryDsn: '',
+
   // Tax rate (8%)
   taxRate: 0.08,
 
