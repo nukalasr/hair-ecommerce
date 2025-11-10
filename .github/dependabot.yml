@@ -1,0 +1,99 @@
+# Dependabot configuration for automated dependency updates
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+updates:
+  # Frontend dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "yourusername"  # Replace with your GitHub username
+    assignees:
+      - "yourusername"  # Replace with your GitHub username
+    labels:
+      - "dependencies"
+      - "frontend"
+    commit-message:
+      prefix: "chore(deps):"
+      include: "scope"
+    # Group Angular updates together
+    groups:
+      angular:
+        patterns:
+          - "@angular/*"
+        update-types:
+          - "minor"
+          - "patch"
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Ignore major version updates (review manually)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Backend dependencies
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "yourusername"  # Replace with your GitHub username
+    assignees:
+      - "yourusername"  # Replace with your GitHub username
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps):"
+      include: "scope"
+    groups:
+      express-ecosystem:
+        patterns:
+          - "express"
+          - "express-*"
+        update-types:
+          - "minor"
+          - "patch"
+      mongodb:
+        patterns:
+          - "mongoose"
+          - "mongodb"
+        update-types:
+          - "minor"
+          - "patch"
+      security:
+        patterns:
+          - "helmet"
+          - "cors"
+          - "express-rate-limit"
+          - "bcryptjs"
+          - "jsonwebtoken"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Ignore major version updates (review manually)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(ci):"

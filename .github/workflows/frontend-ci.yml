@@ -1,0 +1,114 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'angular.json'
+      - 'tsconfig*.json'
+      - 'karma.conf.js'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'angular.json'
+      - 'tsconfig*.json'
+      - 'karma.conf.js'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linter (if available)
+      run: npm run lint --if-present
+      continue-on-error: true
+
+    - name: Run unit tests
+      run: npm run test:ci
+
+    - name: Upload test coverage
+      uses: codecov/codecov-action@v4
+      if: matrix.node-version == '20.x'
+      with:
+        files: ./coverage/hair-ecommerce/lcov.info
+        flags: frontend
+        name: frontend-coverage
+      continue-on-error: true
+
+    - name: Build application
+      run: npm run build:prod
+
+    - name: Check bundle size
+      run: |
+        echo "Bundle size analysis:"
+        du -sh dist/hair-ecommerce/
+        ls -lh dist/hair-ecommerce/*.js 2>/dev/null || echo "No JS bundles found in root"
+        find dist/hair-ecommerce -name "*.js" -type f -exec du -h {} \; | sort -rh | head -10
+
+    - name: Upload build artifacts
+      if: matrix.node-version == '20.x'
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: dist/hair-ecommerce/
+        retention-days: 7
+
+    - name: Archive coverage report
+      if: matrix.node-version == '20.x'
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-coverage-report
+        path: coverage/
+        retention-days: 14
+
+  security-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Run npm audit
+      run: npm audit --audit-level=moderate
+      continue-on-error: true
+
+    - name: Check for known vulnerabilities
+      run: |
+        npm audit --json > audit-results.json || true
+        cat audit-results.json
+
+    - name: Upload audit results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: npm-audit-results
+        path: audit-results.json
+        retention-days: 30

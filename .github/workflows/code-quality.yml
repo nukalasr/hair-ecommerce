@@ -1,0 +1,216 @@
+name: Code Quality
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main ]
+  schedule:
+    # Run code quality checks weekly
+    - cron: '0 0 * * 0'
+
+jobs:
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build:prod
+
+    - name: Run Lighthouse CI
+      uses: treosh/lighthouse-ci-action@v11
+      with:
+        urls: |
+          http://localhost:4200
+        uploadArtifacts: true
+        temporaryPublicStorage: true
+        budgetPath: .github/lighthouse/budget.json
+        configPath: .github/lighthouse/lighthouserc.json
+      continue-on-error: true
+
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build:prod
+
+    - name: Analyze bundle size
+      run: |
+        echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Main Bundle" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        find dist/hair-ecommerce -name "*.js" -type f -exec du -h {} \; | sort -rh | head -10 >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Total Size" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        du -sh dist/hair-ecommerce/ >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Check bundle size limits
+      run: |
+        # Get main bundle size in KB
+        BUNDLE_SIZE=$(du -k dist/hair-ecommerce | tail -1 | cut -f1)
+        MAX_SIZE=1024  # 1MB limit
+
+        echo "Bundle size: ${BUNDLE_SIZE}KB"
+        echo "Maximum allowed: ${MAX_SIZE}KB"
+
+        if [ $BUNDLE_SIZE -gt $MAX_SIZE ]; then
+          echo "❌ Bundle size exceeds limit!"
+          exit 1
+        else
+          echo "✅ Bundle size within limits"
+        fi
+
+  type-check:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Type check frontend
+      run: npx tsc --noEmit
+
+    - name: Type check backend
+      working-directory: ./backend
+      run: npx tsc --noEmit --allowJs --checkJs
+      continue-on-error: true
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  code-coverage:
+    name: Code Coverage Report
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests with coverage
+      run: npm run test:coverage
+
+    - name: Generate coverage report
+      run: |
+        echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ -f coverage/hair-ecommerce/lcov-report/index.html ]; then
+          echo "Coverage report generated successfully" >> $GITHUB_STEP_SUMMARY
+
+          # Extract coverage percentage if available
+          if command -v lcov &> /dev/null; then
+            COVERAGE=$(lcov --summary coverage/hair-ecommerce/lcov.info 2>&1 | grep "lines" | awk '{print $2}')
+            echo "Lines covered: $COVERAGE" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: romeovs/lcov-reporter-action@v0.3.1
+      with:
+        lcov-file: ./coverage/hair-ecommerce/lcov.info
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
+
+  performance-budget:
+    name: Performance Budget Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build:prod
+
+    - name: Check against performance budgets
+      run: |
+        echo "## Performance Budget Check" >> $GITHUB_STEP_SUMMARY
+
+        # Check initial bundle size (should be < 500KB)
+        INITIAL_SIZE=$(find dist/hair-ecommerce -name "main*.js" -type f -exec du -k {} \; | cut -f1)
+        echo "Initial bundle: ${INITIAL_SIZE}KB (budget: 500KB)" >> $GITHUB_STEP_SUMMARY
+
+        if [ $INITIAL_SIZE -gt 500 ]; then
+          echo "⚠️ Initial bundle exceeds budget" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "✅ Initial bundle within budget" >> $GITHUB_STEP_SUMMARY
+        fi

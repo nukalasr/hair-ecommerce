@@ -1,0 +1,186 @@
+# DEPLOYMENT WORKFLOW TEMPLATE
+#
+# This file is a template for deployment automation.
+# To enable deployment:
+# 1. Rename this file to 'deploy.yml' (remove .template extension)
+# 2. Configure the required secrets in GitHub Settings > Secrets and variables > Actions
+# 3. Update the deployment targets and environment variables below
+# 4. Uncomment the workflow trigger section
+#
+# Required GitHub Secrets:
+# - VERCEL_TOKEN or NETLIFY_AUTH_TOKEN (for frontend)
+# - RAILWAY_TOKEN or HEROKU_API_KEY (for backend)
+# - MONGODB_URI (production database)
+# - STRIPE_SECRET_KEY (production Stripe key)
+# - JWT_SECRET (production JWT secret)
+# - SENTRY_DSN (optional, for error monitoring)
+
+name: Deploy to Production
+
+# Uncomment to enable automatic deployment
+# on:
+#   push:
+#     branches: [ main ]
+#   workflow_dispatch:  # Allow manual triggering
+
+# Remove the 'on: workflow_dispatch' below once you're ready for automatic deployment
+on:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  # Frontend Deployment (Vercel example)
+  deploy-frontend-vercel:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-latest
+    # Uncomment when ready:
+    # environment:
+    #   name: production-frontend
+    #   url: https://your-app.vercel.app
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build:prod
+      env:
+        # Add your production environment variables here
+        # These should be stored in GitHub Secrets
+        NG_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+        NG_API_URL: ${{ secrets.PRODUCTION_API_URL }}
+
+    - name: Deploy to Vercel
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        vercel-args: '--prod'
+        working-directory: ./
+
+  # Alternative: Frontend Deployment (Netlify)
+  deploy-frontend-netlify:
+    name: Deploy Frontend to Netlify
+    runs-on: ubuntu-latest
+    if: false  # Set to true to enable Netlify deployment
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build:prod
+
+    - name: Deploy to Netlify
+      uses: nwtgck/actions-netlify@v2.1
+      with:
+        publish-dir: './dist/hair-ecommerce'
+        production-branch: main
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        deploy-message: "Deploy from GitHub Actions"
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+  # Backend Deployment (Railway example)
+  deploy-backend-railway:
+    name: Deploy Backend to Railway
+    runs-on: ubuntu-latest
+    needs: deploy-frontend-vercel  # Wait for frontend to deploy first
+    # Uncomment when ready:
+    # environment:
+    #   name: production-backend
+    #   url: https://your-api.railway.app
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Railway
+      uses: bervProject/railway-deploy@main
+      with:
+        railway_token: ${{ secrets.RAILWAY_TOKEN }}
+        service: backend
+        # Railway will automatically detect and deploy the backend directory
+
+  # Alternative: Backend Deployment (Heroku)
+  deploy-backend-heroku:
+    name: Deploy Backend to Heroku
+    runs-on: ubuntu-latest
+    if: false  # Set to true to enable Heroku deployment
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Heroku
+      uses: akhileshns/heroku-deploy@v3.13.15
+      with:
+        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+        heroku_email: ${{ secrets.HEROKU_EMAIL }}
+        appdir: "backend"
+        buildpack: "heroku/nodejs"
+
+  # Alternative: Backend Deployment (Render)
+  deploy-backend-render:
+    name: Deploy Backend to Render
+    runs-on: ubuntu-latest
+    if: false  # Set to true to enable Render deployment
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Trigger Render Deploy
+      run: |
+        curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+
+  # Post-deployment health checks
+  verify-deployment:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend-vercel, deploy-backend-railway]
+
+    steps:
+    - name: Check frontend health
+      run: |
+        sleep 30  # Wait for deployment to propagate
+        curl -f ${{ secrets.PRODUCTION_FRONTEND_URL }} || exit 1
+
+    - name: Check backend health
+      run: |
+        curl -f ${{ secrets.PRODUCTION_API_URL }}/health || exit 1
+
+    - name: Send deployment notification
+      if: success()
+      run: |
+        echo "Deployment successful!"
+        # Add Slack/Discord notification here if needed
+
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        echo "Deployment failed. Consider implementing automatic rollback."
+        # Implement rollback logic here
