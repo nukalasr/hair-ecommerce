@@ -1,0 +1,86 @@
+<div class="container">
+  <div *ngIf="loading" class="loading">Loading...</div>
+
+  <div *ngIf="!loading && product" class="product-details">
+    <div class="product-image-section">
+      <img [src]="product.imageUrl" [alt]="product.name" class="main-image">
+    </div>
+
+    <div class="product-info-section">
+      <h1>{{ product.name }}</h1>
+
+      <div class="rating-section">
+        <span class="stars">⭐ {{ product.rating }}</span>
+        <span class="reviews">({{ product.reviews }} reviews)</span>
+      </div>
+
+      <div class="price-section">
+        <span class="price">${{ product.price.toFixed(2) }}</span>
+      </div>
+
+      <div class="description-section">
+        <h3>Description</h3>
+        <p>{{ product.description }}</p>
+      </div>
+
+      <div class="specifications">
+        <h3>Specifications</h3>
+        <div class="spec-grid">
+          <div class="spec-item">
+            <strong>Category:</strong>
+            <span>{{ product.category }}</span>
+          </div>
+          <div class="spec-item">
+            <strong>Length:</strong>
+            <span>{{ product.length }} inches</span>
+          </div>
+          <div class="spec-item">
+            <strong>Texture:</strong>
+            <span>{{ product.texture }}</span>
+          </div>
+          <div class="spec-item">
+            <strong>Color:</strong>
+            <span>{{ product.color }}</span>
+          </div>
+          <div class="spec-item">
+            <strong>Origin:</strong>
+            <span>{{ product.origin }}</span>
+          </div>
+          <div class="spec-item">
+            <strong>Stock:</strong>
+            <span [class.low-stock]="product.stock < 10">{{ product.stock }} available</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="purchase-section">
+        <div class="quantity-selector">
+          <label>Quantity:</label>
+          <div class="quantity-controls">
+            <button (click)="decrementQuantity()" class="btn btn-secondary">-</button>
+            <input type="number" [(ngModel)]="quantity" [max]="product.stock" [min]="1" readonly>
+            <button (click)="incrementQuantity()" class="btn btn-secondary">+</button>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button (click)="addToCart()" class="btn btn-secondary" [disabled]="product.stock === 0">
+            Add to Cart
+          </button>
+          <button (click)="buyNow()" class="btn btn-primary" [disabled]="product.stock === 0">
+            Buy Now
+          </button>
+        </div>
+
+        <div *ngIf="product.stock === 0" class="out-of-stock">
+          Out of Stock
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && !product" class="not-found">
+    <h2>Product not found</h2>
+    <a routerLink="/" class="btn btn-primary">Back to Home</a>
+  </div>
+</div>

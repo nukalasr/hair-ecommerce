@@ -1,0 +1,88 @@
+<div class="container">
+  <h2 class="page-title">Our Premium Hair Bundles</h2>
+
+  <!-- Filter Section -->
+  <div class="filter-section card">
+    <h3>Filter Products</h3>
+    <div class="filter-grid">
+      <div class="filter-item">
+        <label>Category:</label>
+        <select [(ngModel)]="filter.category" (change)="applyFilter()">
+          <option value="">All Categories</option>
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label>Texture:</label>
+        <select [(ngModel)]="filter.texture" (change)="applyFilter()">
+          <option value="">All Textures</option>
+          <option *ngFor="let texture of textures" [value]="texture">{{ texture }}</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label>Origin:</label>
+        <select [(ngModel)]="filter.origin" (change)="applyFilter()">
+          <option value="">All Origins</option>
+          <option *ngFor="let origin of origins" [value]="origin">{{ origin }}</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label>Length (inches):</label>
+        <select [(ngModel)]="filter.length" (change)="applyFilter()">
+          <option value="">All Lengths</option>
+          <option *ngFor="let length of lengths" [value]="length">{{ length }}"</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label>Min Price:</label>
+        <input type="number" [(ngModel)]="filter.minPrice" (change)="applyFilter()" placeholder="$0">
+      </div>
+
+      <div class="filter-item">
+        <label>Max Price:</label>
+        <input type="number" [(ngModel)]="filter.maxPrice" (change)="applyFilter()" placeholder="$500">
+      </div>
+    </div>
+
+    <button (click)="clearFilter()" class="btn btn-secondary">Clear Filters</button>
+  </div>
+
+  <!-- Products Grid -->
+  <div class="products-grid grid grid-3">
+    <div *ngFor="let product of filteredProducts" class="product-card card">
+      <img [src]="product.imageUrl" [alt]="product.name" class="product-image">
+
+      <div class="product-info">
+        <h3>{{ product.name }}</h3>
+        <p class="product-description">{{ product.description }}</p>
+
+        <div class="product-details">
+          <span class="detail-badge">{{ product.origin }}</span>
+          <span class="detail-badge">{{ product.length }}"</span>
+          <span class="detail-badge">{{ product.texture }}</span>
+        </div>
+
+        <div class="product-rating">
+          <span class="stars">⭐ {{ product.rating }}</span>
+          <span class="reviews">({{ product.reviews }} reviews)</span>
+        </div>
+
+        <div class="product-footer">
+          <span class="price">${{ product.price.toFixed(2) }}</span>
+          <div class="product-actions">
+            <a [routerLink]="['/products', product.id]" class="btn btn-secondary">View</a>
+            <button (click)="addToCart(product)" class="btn btn-primary">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="filteredProducts.length === 0" class="no-products">
+    <p>No products found matching your criteria.</p>
+  </div>
+</div>

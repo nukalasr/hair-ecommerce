@@ -1,0 +1,173 @@
+<div class="container">
+  <div class="dashboard-header">
+    <h2>Seller Dashboard</h2>
+    <button (click)="toggleAddForm()" class="btn btn-primary">
+      {{ showAddForm ? 'Cancel' : '+ Add New Product' }}
+    </button>
+  </div>
+
+  <!-- Add Product Form -->
+  <div *ngIf="showAddForm" class="product-form card">
+    <h3>Add New Product</h3>
+    <form (ngSubmit)="addProduct()">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Product Name *</label>
+          <input type="text" [(ngModel)]="newProduct.name" name="name" required>
+        </div>
+
+        <div class="form-group">
+          <label>Price ($) *</label>
+          <input type="number" [(ngModel)]="newProduct.price" name="price" step="0.01" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Description *</label>
+        <textarea [(ngModel)]="newProduct.description" name="description" rows="3" required></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Category *</label>
+          <select [(ngModel)]="newProduct.category" name="category" required>
+            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Texture *</label>
+          <select [(ngModel)]="newProduct.texture" name="texture" required>
+            <option *ngFor="let texture of textures" [value]="texture">{{ texture }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Origin *</label>
+          <select [(ngModel)]="newProduct.origin" name="origin" required>
+            <option *ngFor="let origin of origins" [value]="origin">{{ origin }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Length (inches) *</label>
+          <select [(ngModel)]="newProduct.length" name="length" required>
+            <option *ngFor="let length of lengths" [value]="length">{{ length }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Color *</label>
+          <input type="text" [(ngModel)]="newProduct.color" name="color" required>
+        </div>
+
+        <div class="form-group">
+          <label>Stock *</label>
+          <input type="number" [(ngModel)]="newProduct.stock" name="stock" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Image URL</label>
+        <input type="url" [(ngModel)]="newProduct.imageUrl" name="imageUrl">
+      </div>
+
+      <button type="submit" class="btn btn-primary">Add Product</button>
+    </form>
+  </div>
+
+  <!-- Products List -->
+  <div class="products-section">
+    <h3>My Products ({{ products.length }})</h3>
+
+    <div *ngIf="products.length === 0" class="no-products">
+      <p>You haven't added any products yet. Click "Add New Product" to get started!</p>
+    </div>
+
+    <div class="products-table" *ngIf="products.length > 0">
+      <div *ngFor="let product of products" class="product-row card">
+        <div *ngIf="editingProduct?.id !== product.id" class="product-view">
+          <img [src]="product.imageUrl" [alt]="product.name" class="product-thumb">
+
+          <div class="product-details">
+            <h4>{{ product.name }}</h4>
+            <p>{{ product.description }}</p>
+            <div class="product-specs">
+              <span class="spec-badge">{{ product.category }}</span>
+              <span class="spec-badge">{{ product.origin }}</span>
+              <span class="spec-badge">{{ product.length }}"</span>
+              <span class="spec-badge">{{ product.texture }}</span>
+            </div>
+          </div>
+
+          <div class="product-price">
+            <div class="price">${{ product.price.toFixed(2) }}</div>
+            <div class="stock" [class.low-stock]="product.stock < 10">
+              Stock: {{ product.stock }}
+            </div>
+          </div>
+
+          <div class="product-stats">
+            <div class="stat">
+              <span class="stat-label">Rating:</span>
+              <span class="stat-value">⭐ {{ product.rating }}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Reviews:</span>
+              <span class="stat-value">{{ product.reviews }}</span>
+            </div>
+          </div>
+
+          <div class="product-actions">
+            <button (click)="editProduct(product)" class="btn btn-secondary">Edit</button>
+            <button (click)="deleteProduct(product.id)" class="btn btn-secondary">Delete</button>
+          </div>
+        </div>
+
+        <!-- Edit Form -->
+        <div *ngIf="editingProduct?.id === product.id" class="product-edit">
+          <h4>Edit Product</h4>
+          <form (ngSubmit)="saveProduct()">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" [(ngModel)]="editingProduct!.name" name="editName">
+              </div>
+
+              <div class="form-group">
+                <label>Price ($)</label>
+                <input type="number" [(ngModel)]="editingProduct!.price" name="editPrice" step="0.01">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Description</label>
+              <textarea [(ngModel)]="editingProduct!.description" name="editDescription" rows="2"></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Stock</label>
+                <input type="number" [(ngModel)]="editingProduct!.stock" name="editStock">
+              </div>
+
+              <div class="form-group">
+                <label>Color</label>
+                <input type="text" [(ngModel)]="editingProduct!.color" name="editColor">
+              </div>
+            </div>
+
+            <div class="edit-actions">
+              <button type="submit" class="btn btn-primary">Save</button>
+              <button type="button" (click)="cancelEdit()" class="btn btn-secondary">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
