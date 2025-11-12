@@ -304,10 +304,13 @@ The application has been hardened with comprehensive security measures:
 The project includes several comprehensive documentation files:
 
 - **`SECURITY_IMPROVEMENTS.md`** - Complete security audit and hardening details
+- **`backend/SECURITY.md`** - Backend security configuration (CSP, Helmet, rate limiting, authentication)
+- **`SENTRY.md`** - Error monitoring setup and usage guide
 - **`PAYMENT_INTEGRATION.md`** - Stripe payment setup guide with backend examples
 - **`FULLSTACK_SETUP_GUIDE.md`** - Step-by-step guide to run frontend + backend
 - **`backend/README.md`** - Backend API documentation and setup
 - **`IMPLEMENTATION_SUMMARY.md`** - Feature implementation summary
 - **`HTTPONLY_MIGRATION_GUIDE.md`** - HTTPOnly cookie security migration (if using backend)
+- **`DOCKER.md`** - Docker containerization and deployment guide
 
 Refer to these documents for detailed setup instructions and architectural decisions.

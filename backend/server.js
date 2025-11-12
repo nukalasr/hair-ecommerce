@@ -60,10 +60,25 @@ const limiter = rateLimit({
 // Apply rate limiting to all routes
 app.use('/api', limiter);
 
-// Security middleware
+// Security middleware with minimal CSP for API
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable for API
-  crossOriginEmbedderPolicy: false
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],           // Default: block everything
+      baseUri: ["'none'"],               // Prevent <base> tag injection
+      fontSrc: ["'none'"],               // No fonts needed for API
+      formAction: ["'none'"],            // No forms in API responses
+      frameAncestors: ["'none'"],        // Prevent API from being framed
+      imgSrc: ["'none'"],                // No images in API responses
+      objectSrc: ["'none'"],             // No plugins
+      scriptSrc: ["'none'"],             // No scripts in API responses
+      scriptSrcAttr: ["'none'"],         // No inline event handlers
+      styleSrc: ["'none'"],              // No styles in API responses
+      upgradeInsecureRequests: [],       // Upgrade HTTP to HTTPS
+    },
+  },
+  crossOriginEmbedderPolicy: false,      // Not needed for API
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow CORS requests
 }));
 
 // CORS configuration
