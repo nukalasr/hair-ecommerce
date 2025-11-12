@@ -35,6 +35,7 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 const { errorHandler } = require('./middleware/errorHandler');
+const httpsRedirect = require('./middleware/httpsRedirect');
 
 // Connect to database
 connectDB();
@@ -46,6 +47,14 @@ const app = express();
 if (process.env.SENTRY_DSN) {
   app.use(Sentry.Handlers.requestHandler());
   app.use(Sentry.Handlers.tracingHandler());
+}
+
+// HTTPS enforcement (redirect HTTP to HTTPS in production)
+app.use(httpsRedirect);
+
+// Trust proxy (needed for X-Forwarded-Proto header from load balancers)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
 }
 
 // Rate limiting
@@ -76,6 +85,12 @@ app.use(helmet({
       styleSrc: ["'none'"],              // No styles in API responses
       upgradeInsecureRequests: [],       // Upgrade HTTP to HTTPS
     },
+  },
+  // HTTP Strict Transport Security (HSTS)
+  strictTransportSecurity: {
+    maxAge: 31536000,                    // 1 year in seconds
+    includeSubDomains: true,             // Apply to all subdomains
+    preload: true,                       // Allow browser preload list inclusion
   },
   crossOriginEmbedderPolicy: false,      // Not needed for API
   crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow CORS requests
