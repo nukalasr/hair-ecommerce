@@ -181,10 +181,13 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     );
 
     // For demo, save order and redirect to mock success page
-    this.orderService.saveOrder(order).subscribe(() => {
+    this.orderService.saveOrder(order).then(() => {
       this.router.navigate(['/order-success'], {
         queryParams: { orderId: order.id, demo: 'true' }
       });
+    }).catch((error) => {
+      console.error('Error saving order:', error);
+      this.errorMessage = 'Failed to save order. Please try again.';
     });
   }
 
@@ -203,7 +206,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
           order.paidAt = new Date();
 
           // Save order
-          this.orderService.saveOrder(order).subscribe(() => {
+          this.orderService.saveOrder(order).then(() => {
             // Clear cart
             this.cartService.clearCart();
 
@@ -211,6 +214,10 @@ export class CheckoutComponent implements OnInit, OnDestroy {
             this.router.navigate(['/order-success'], {
               queryParams: { orderId: order.id }
             });
+          }).catch((error) => {
+            console.error('Error saving order:', error);
+            this.errorMessage = 'Failed to save order. Please try again.';
+            this.isProcessing = false;
           });
         } else {
           this.errorMessage = 'Payment failed. Please try again.';

@@ -23,6 +23,10 @@ backend/.env.local
 backend/.env.production
 backend/.env.staging
 
+# Credential files - NEVER COMMIT
+MONGODB_CREDENTIALS.txt
+*_CREDENTIALS.txt
+
 # IDEs and editors
 .idea/
 .project
@@ -111,3 +115,4 @@ jspm_packages/
 # Temporary folders
 temp/
 tmp/
+backend/backend/

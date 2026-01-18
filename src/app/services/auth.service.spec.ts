@@ -1,4 +1,5 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
 import { SecureStorageService } from './secure-storage.service';
 import { User } from '../models/user.model';
@@ -6,6 +7,7 @@ import { firstValueFrom } from 'rxjs';
 
 describe('AuthService', () => {
   let service: AuthService;
+  let httpMock: HttpTestingController;
   let secureStorageService: jasmine.SpyObj<SecureStorageService>;
 
   beforeEach(() => {
@@ -15,8 +17,10 @@ describe('AuthService', () => {
       'getItem',
       'removeItem'
     ]);
+    secureStorageSpy.getItem.and.returnValue(null); // Default: no stored user
 
     TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
       providers: [
         AuthService,
         { provide: SecureStorageService, useValue: secureStorageSpy }
@@ -24,7 +28,17 @@ describe('AuthService', () => {
     });
 
     service = TestBed.inject(AuthService);
+    httpMock = TestBed.inject(HttpTestingController);
     secureStorageService = TestBed.inject(SecureStorageService) as jasmine.SpyObj<SecureStorageService>;
+
+    // Handle the initial checkAuthStatus call made in constructor
+    // This will fail, putting the service in demo mode
+    const req = httpMock.expectOne((request) => request.url.includes('/auth/me'));
+    req.flush({ success: false }, { status: 401, statusText: 'Unauthorized' });
+  });
+
+  afterEach(() => {
+    httpMock.verify();
   });
 
   it('should be created', () => {
@@ -95,20 +109,17 @@ describe('AuthService', () => {
       expect(result.message).toBeDefined();
     });
 
-    it('should update currentUser$ observable on successful login', (done) => {
-      service.login('buyer@example.com', 'DemoPassword123!').subscribe(() => {
-        service.currentUser$.subscribe(user => {
-          expect(user).toBeDefined();
-          expect(user?.email).toBe('buyer@example.com');
-          done();
-        });
-      });
+    it('should update currentUser$ observable on successful login', async () => {
+      await firstValueFrom(service.login('buyer@example.com', 'DemoPassword123!'));
+
+      const currentUser = service.getCurrentUser();
+
+      expect(currentUser).toBeDefined();
+      expect(currentUser?.email).toBe('buyer@example.com');
     });
 
     it('should call secureStorage.setItem on successful login', async () => {
-      await firstValueFrom(
-        service.login('buyer@example.com', 'DemoPassword123!')
-      );
+      await firstValueFrom(service.login('buyer@example.com', 'DemoPassword123!'));
 
       expect(secureStorageService.setItem).toHaveBeenCalledWith(
         'currentUser',
@@ -120,9 +131,7 @@ describe('AuthService', () => {
   describe('Logout', () => {
     beforeEach(async () => {
       // Login first
-      await firstValueFrom(
-        service.login('buyer@example.com', 'DemoPassword123!')
-      );
+      await firstValueFrom(service.login('buyer@example.com', 'DemoPassword123!'));
     });
 
     it('should clear current user', () => {
@@ -150,7 +159,7 @@ describe('AuthService', () => {
     it('should register a new buyer successfully', async () => {
       const newUser = {
         email: 'newbuyer@example.com',
-        password: 'NewPassword123!',
+        password: 'MySecure!Pass2024',
         firstName: 'New',
         lastName: 'Buyer',
         role: 'buyer' as const
@@ -167,7 +176,7 @@ describe('AuthService', () => {
     it('should register a new seller successfully', async () => {
       const newUser = {
         email: 'newseller@example.com',
-        password: 'NewPassword123!',
+        password: 'MySecure!Pass2024',
         firstName: 'New',
         lastName: 'Seller',
         role: 'seller' as const
@@ -182,7 +191,7 @@ describe('AuthService', () => {
     it('should fail registration with existing email', async () => {
       const existingUser = {
         email: 'buyer@example.com',
-        password: 'Password123!',
+        password: 'MySecure!Pass2024',
         firstName: 'Test',
         lastName: 'User',
         role: 'buyer' as const
@@ -212,7 +221,7 @@ describe('AuthService', () => {
     it('should fail registration with invalid email', async () => {
       const invalidEmailUser = {
         email: 'invalid-email',
-        password: 'Password123!',
+        password: 'MySecure!Pass2024',
         firstName: 'Test',
         lastName: 'User',
         role: 'buyer' as const
@@ -224,22 +233,21 @@ describe('AuthService', () => {
       expect(result.message).toContain('email');
     });
 
-    it('should automatically login after successful registration', (done) => {
+    it('should automatically login after successful registration', async () => {
       const newUser = {
         email: 'autoLogin@example.com',
-        password: 'Password123!',
+        password: 'MySecure!Pass2024',
         firstName: 'Auto',
         lastName: 'Login',
         role: 'buyer' as const
       };
 
-      service.register(newUser).subscribe(() => {
-        service.currentUser$.subscribe(user => {
-          expect(user).toBeDefined();
-          expect(user?.email).toBe(newUser.email);
-          done();
-        });
-      });
+      await firstValueFrom(service.register(newUser));
+
+      const currentUser = service.getCurrentUser();
+
+      expect(currentUser).toBeDefined();
+      expect(currentUser?.email).toBe(newUser.email);
     });
   });
 
@@ -249,9 +257,7 @@ describe('AuthService', () => {
     });
 
     it('should return current user when logged in', async () => {
-      await firstValueFrom(
-        service.login('buyer@example.com', 'DemoPassword123!')
-      );
+      await firstValueFrom(service.login('buyer@example.com', 'DemoPassword123!'));
 
       const currentUser = service.getCurrentUser();
       expect(currentUser).toBeDefined();
@@ -261,18 +267,14 @@ describe('AuthService', () => {
 
   describe('Role Checking', () => {
     it('should correctly identify buyer role', async () => {
-      await firstValueFrom(
-        service.login('buyer@example.com', 'DemoPassword123!')
-      );
+      await firstValueFrom(service.login('buyer@example.com', 'DemoPassword123!'));
 
       const currentUser = service.getCurrentUser();
       expect(currentUser?.role).toBe('buyer');
     });
 
     it('should correctly identify seller role', async () => {
-      await firstValueFrom(
-        service.login('seller@example.com', 'DemoPassword123!')
-      );
+      await firstValueFrom(service.login('seller@example.com', 'DemoPassword123!'));
 
       const currentUser = service.getCurrentUser();
       expect(currentUser?.role).toBe('seller');

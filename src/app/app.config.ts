@@ -4,6 +4,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { credentialsInterceptor } from './interceptors/credentials.interceptor';
+import { errorInterceptor } from './interceptors/error.interceptor';
 import * as Sentry from '@sentry/angular';
 
 export const appConfig: ApplicationConfig = {
@@ -11,7 +12,10 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideAnimations(),
     provideHttpClient(
-      withInterceptors([credentialsInterceptor])  // Add httpOnly cookie support
+      withInterceptors([
+        credentialsInterceptor,  // Add httpOnly cookie support
+        errorInterceptor         // Global error handling with retry logic
+      ])
     ),
     {
       provide: ErrorHandler,

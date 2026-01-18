@@ -8,6 +8,17 @@ This is a hair bundles ecommerce Angular SPA built with Angular 17+ using standa
 
 ## Development Commands
 
+### Node.js Version Requirements
+This project requires **Node.js LTS v20.x or v22.x** (specified in `.nvmrc` and `package.json` engines).
+- `.nvmrc` specifies v20.18.1 for automatic version switching with NVM
+- Avoid odd-numbered Node versions (v25, v23, v21) - these are unstable development releases
+- See `NODE_VERSION_GUIDE.md` for detailed upgrade instructions
+
+```bash
+node --version   # Should show v20.x.x or v22.x.x
+nvm use          # Auto-switches to .nvmrc version (if using NVM)
+```
+
 ### Running the Application
 ```bash
 npm start          # Start dev server at http://localhost:4200
@@ -16,14 +27,19 @@ ng serve           # Alternative using Angular CLI
 
 ### Building
 ```bash
-ng build                                    # Production build (outputs to dist/)
-ng build --configuration production         # Explicit production build
+npm run build             # Production build (uses ng build)
+npm run build:prod        # Explicit production build (same as above)
+ng build                  # Production build (outputs to dist/)
+ng build --configuration production  # Explicit production configuration
 ng build --watch --configuration development # Watch mode for development
 ```
 
 ### Testing
 ```bash
-ng test            # Run Jasmine/Karma unit tests
+npm test                  # Run Jasmine/Karma unit tests (interactive)
+npm run test:headless     # Run tests in headless Chrome (single run)
+npm run test:coverage     # Run tests with code coverage report
+npm run test:ci           # CI mode (headless + coverage)
 ```
 
 ## Architecture
@@ -77,6 +93,7 @@ This is an Angular 17+ application using **standalone components** (no NgModules
 - AES-GCM encrypted localStorage wrapper
 - Device-specific encryption keys
 - Replaces direct localStorage access for sensitive data
+- Used by OrderService and AuthService for PII/sensitive data encryption
 
 ### Data Models
 
@@ -103,8 +120,17 @@ Routes defined in `src/app/app.routes.ts`:
 - `/seller/dashboard` - Seller product management (protected: authGuard, roleGuard with role='seller')
 
 **Route Guards:**
-- `authGuard` (`src/app/guards/auth.guard.ts`) - Requires authentication
+- `authGuard` (`src/app/guards/auth.guard.ts`) - Requires authentication, redirects to login with returnUrl
 - `roleGuard` (`src/app/guards/role.guard.ts`) - Enforces role-based access control
+
+**HTTP Interceptors:**
+- `errorInterceptor` (`src/app/interceptors/error.interceptor.ts`) - Global HTTP error handling
+  - Automatic retry with exponential backoff (2 retries for 5xx errors)
+  - Smart retry logic (skips 4xx client errors)
+  - 401 auto-redirect to login with returnUrl preservation
+  - Network offline detection
+  - User-friendly error messages for all HTTP status codes
+  - Registered in `app.config.ts` via `provideHttpClient(withInterceptors([errorInterceptor]))`
 
 ### Component Organization
 
@@ -142,16 +168,26 @@ The project uses **strict mode** (`tsconfig.json`):
 - `noImplicitReturns: true`
 - `noFallthroughCasesInSwitch: true`
 - `strictTemplates: true`
+- Module resolution: `"bundler"` (modern standard for Angular 21+)
 
 When writing code, ensure full type safety and avoid `any` types.
+
+### Error Monitoring
+
+**Sentry Integration** (`@sentry/angular` v9.47.1)
+- Automatic error tracking and reporting
+- Configured in `app.config.ts` via `provideSentry()`
+- Environment-aware (only active in production by default)
+- See `SENTRY.md` for setup and configuration details
 
 ### Utility Modules
 
 **crypto.util.ts** (`src/app/utils/crypto.util.ts`)
-- PBKDF2 password hashing (100k iterations, SHA-256)
+- PBKDF2 password hashing (600,000 iterations, SHA-256) - follows OWASP 2023 recommendations
 - AES-GCM encryption/decryption for localStorage
 - Uses Web Crypto API for cryptographic operations
 - Timing-attack resistant password verification
+- Device-specific salt generation
 
 **validation.util.ts** (`src/app/utils/validation.util.ts`)
 - Comprehensive input validation utilities
@@ -199,7 +235,8 @@ A full-featured Node.js/Express backend is available in the `backend/` directory
 - **MongoDB + Mongoose** - Database and ODM
 - **JWT** - Authentication with bcrypt password hashing
 - **Stripe** - Payment processing with webhook support
-- **Security** - Helmet, CORS, rate limiting, input validation
+- **Security** - Helmet, CORS whitelist validation, rate limiting, input validation
+- **CORS** - Whitelist-based origin validation with separate dev/production configs
 
 ### Running the Backend
 
@@ -263,9 +300,10 @@ Product data is hardcoded in `ProductService` constructor (6 sample products). U
 The application has been hardened with comprehensive security measures:
 
 ### Authentication
-- Password hashing using PBKDF2 (100k iterations, SHA-256)
+- Password hashing using PBKDF2 (600,000 iterations, SHA-256) - OWASP 2023 compliant
 - Demo password: `DemoPassword123!` for both buyer@example.com and seller@example.com
-- Encrypted session storage using Web Crypto API
+- Encrypted session storage using Web Crypto API (AES-GCM)
+- Device-specific encryption keys prevent cross-device token theft
 - Located in: `src/app/utils/crypto.util.ts`, `src/app/services/secure-storage.service.ts`
 
 ### Authorization
@@ -293,6 +331,20 @@ The application has been hardened with comprehensive security measures:
 - Quantities checked against available stock
 - Returns success/failure objects with messages
 
+### Data Protection
+- **OrderService** encrypts all customer PII before localStorage storage
+- Uses AES-GCM encryption via SecureStorageService
+- All order operations are async (Promise-based) for encryption overhead
+- GDPR/CCPA compliant client-side storage
+- Automatic corruption detection and cleanup
+
+### Production Security Features
+- **Source maps disabled** - No code exposure in production builds
+- **Subresource Integrity (SRI)** - SHA-384 hashes on all scripts (prevents CDN tampering)
+- **Mock payments disabled** - Production mode blocks mock payment processing
+- **Environment validation** - Clear TODOs prevent deployment with placeholder configs
+- **Build verification** - Production build outputs 676 KB (169 KB gzipped)
+
 ### Important Security Notes
 - **Do NOT store credit card data** - removed from checkout
 - **Payment processing** should use Stripe/PayPal SDKs
@@ -303,14 +355,26 @@ The application has been hardened with comprehensive security measures:
 
 The project includes several comprehensive documentation files:
 
+### Security & Production
 - **`SECURITY_IMPROVEMENTS.md`** - Complete security audit and hardening details
+- **`PRODUCTION_FIXES_SUMMARY.md`** - Recent production security fixes (Angular 21 upgrade, encryption, etc.)
+- **`PRODUCTION_READINESS.md`** - Production deployment checklist
+- **`SECURITY_VULNERABILITIES.md`** - Known vulnerabilities and mitigation strategies
 - **`backend/SECURITY.md`** - Backend security configuration (CSP, Helmet, rate limiting, authentication)
-- **`SENTRY.md`** - Error monitoring setup and usage guide
-- **`PAYMENT_INTEGRATION.md`** - Stripe payment setup guide with backend examples
+
+### Setup & Configuration
+- **`NODE_VERSION_GUIDE.md`** - Node.js LTS version requirements and upgrade guide
 - **`FULLSTACK_SETUP_GUIDE.md`** - Step-by-step guide to run frontend + backend
+- **`PAYMENT_INTEGRATION.md`** - Stripe payment setup guide with backend examples
+- **`SENTRY.md`** - Error monitoring setup and usage guide
+- **`DOCKER.md`** - Docker containerization and deployment guide
+- **`HTTPS_SETUP.md`** - HTTPS configuration for production
+
+### Implementation Guides
 - **`backend/README.md`** - Backend API documentation and setup
 - **`IMPLEMENTATION_SUMMARY.md`** - Feature implementation summary
 - **`HTTPONLY_MIGRATION_GUIDE.md`** - HTTPOnly cookie security migration (if using backend)
-- **`DOCKER.md`** - Docker containerization and deployment guide
+- **`TESTING_SETUP.md`** - Test configuration and best practices
+- **`CODE_REVIEW.md`** - Code quality guidelines
 
 Refer to these documents for detailed setup instructions and architectural decisions.

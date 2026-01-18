@@ -96,12 +96,37 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow CORS requests
 }));
 
-// CORS configuration
+// CORS configuration with whitelist validation
+const allowedOrigins = [
+  'https://haircommerce.com',        // Production domain
+  'https://www.haircommerce.com',    // Production www subdomain
+  process.env.FRONTEND_URL,           // Configured frontend URL
+  ...(process.env.NODE_ENV === 'development' ? [
+    'http://localhost:4200',          // Angular dev server
+    'http://localhost:3000',          // Alternative port
+    'http://127.0.0.1:4200'           // Localhost variant
+  ] : [])
+].filter(Boolean); // Remove undefined values
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:4200',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Check if origin is in whitelist
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️  CORS policy violation: Origin ${origin} not allowed`);
+      callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400 // 24 hours - cache preflight requests
 }));
 
 // Logging

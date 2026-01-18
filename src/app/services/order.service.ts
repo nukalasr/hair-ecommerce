@@ -4,12 +4,14 @@ import { Order } from '../models/order.model';
 import { Cart } from '../models/cart.model';
 import { User } from '../models/user.model';
 import { ValidationUtil } from '../utils/validation.util';
+import { SecureStorageService } from './secure-storage.service';
 
 /**
  * Order Service
  * Manages order creation and history
  *
- * NOTE: In production, this should interact with a backend API
+ * SECURITY: Orders now use encrypted storage (SecureStorageService) to protect customer PII
+ * NOTE: In production, orders should be stored server-side only
  */
 @Injectable({
   providedIn: 'root'
@@ -19,35 +21,43 @@ export class OrderService {
   orders$ = this.ordersSubject.asObservable();
 
   private orders: Order[] = [];
+  private readonly ORDERS_KEY = 'encrypted_orders';
 
-  constructor() {
+  constructor(private secureStorage: SecureStorageService) {
     this.loadOrders();
   }
 
   /**
-   * Load orders from localStorage
+   * Load orders from encrypted storage
+   * SECURITY: Uses AES-GCM encryption to protect customer data
    */
-  private loadOrders(): void {
+  private async loadOrders(): Promise<void> {
     try {
-      const savedOrders = localStorage.getItem('orders');
-      if (savedOrders) {
-        this.orders = JSON.parse(savedOrders);
+      const savedOrders = await this.secureStorage.getItem<Order[]>(this.ORDERS_KEY);
+      if (savedOrders && Array.isArray(savedOrders)) {
+        this.orders = savedOrders;
         this.ordersSubject.next(this.orders);
       }
     } catch (error) {
-      console.error('Error loading orders:', error);
+      console.error('Error loading orders from secure storage:', error);
+      // If decryption fails, clear corrupted data
+      await this.secureStorage.removeItem(this.ORDERS_KEY);
+      this.orders = [];
+      this.ordersSubject.next(this.orders);
     }
   }
 
   /**
-   * Save orders to localStorage
+   * Save orders to encrypted storage
+   * SECURITY: Uses AES-GCM encryption to protect customer data
    */
-  private saveOrders(): void {
+  private async saveOrders(): Promise<void> {
     try {
-      localStorage.setItem('orders', JSON.stringify(this.orders));
+      await this.secureStorage.setItem(this.ORDERS_KEY, this.orders);
       this.ordersSubject.next(this.orders);
     } catch (error) {
-      console.error('Error saving orders:', error);
+      console.error('Error saving orders to secure storage:', error);
+      throw error;
     }
   }
 
@@ -110,17 +120,19 @@ export class OrderService {
 
   /**
    * Save order after successful payment
+   * SECURITY: Now uses encrypted storage to protect customer data
    */
-  saveOrder(order: Order): Observable<Order> {
+  async saveOrder(order: Order): Promise<Order> {
     this.orders.push(order);
-    this.saveOrders();
-    return of(order);
+    await this.saveOrders();
+    return order;
   }
 
   /**
    * Update order payment status
+   * SECURITY: Uses encrypted storage
    */
-  updatePaymentStatus(orderId: string, status: 'pending' | 'paid' | 'failed', transactionId?: string): Observable<Order | undefined> {
+  async updatePaymentStatus(orderId: string, status: 'pending' | 'paid' | 'failed', transactionId?: string): Promise<Order | undefined> {
     const order = this.orders.find(o => o.id === orderId);
 
     if (order) {
@@ -136,11 +148,11 @@ export class OrderService {
         order.paidAt = new Date();
       }
 
-      this.saveOrders();
-      return of(order);
+      await this.saveOrders();
+      return order;
     }
 
-    return of(undefined);
+    return undefined;
   }
 
   /**
@@ -168,30 +180,32 @@ export class OrderService {
 
   /**
    * Cancel order
+   * SECURITY: Uses encrypted storage
    */
-  cancelOrder(orderId: string): Observable<{ success: boolean; message: string }> {
+  async cancelOrder(orderId: string): Promise<{ success: boolean; message: string }> {
     const order = this.orders.find(o => o.id === orderId);
 
     if (!order) {
-      return of({ success: false, message: 'Order not found' });
+      return { success: false, message: 'Order not found' };
     }
 
     if (order.orderStatus === 'shipped' || order.orderStatus === 'delivered') {
-      return of({ success: false, message: 'Cannot cancel order that has been shipped' });
+      return { success: false, message: 'Cannot cancel order that has been shipped' };
     }
 
     order.orderStatus = 'cancelled';
     order.updatedAt = new Date();
-    this.saveOrders();
+    await this.saveOrders();
 
-    return of({ success: true, message: 'Order cancelled successfully' });
+    return { success: true, message: 'Order cancelled successfully' };
   }
 
   /**
    * Clear all orders (for testing)
+   * SECURITY: Uses encrypted storage
    */
-  clearOrders(): void {
+  async clearOrders(): Promise<void> {
     this.orders = [];
-    this.saveOrders();
+    await this.saveOrders();
   }
 }

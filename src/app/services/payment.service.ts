@@ -153,8 +153,21 @@ export class PaymentService {
   /**
    * Mock payment processing for demo purposes
    * NEVER use this in production - always use real Stripe payment processing
+   *
+   * SECURITY: This method is DISABLED in production mode to prevent abuse
    */
   processMockPayment(orderData: any): Observable<{ success: boolean; orderId: string; message: string }> {
+    // CRITICAL SECURITY CHECK: Prevent mock payments in production
+    if (environment.production) {
+      return new Observable(observer => {
+        observer.error({
+          success: false,
+          message: 'Mock payments are disabled in production. Please configure Stripe payment processing.'
+        });
+        observer.complete();
+      });
+    }
+
     console.warn('⚠️  DEMO MODE: Using mock payment processing');
     console.log('Mock order data:', orderData);
 
@@ -169,7 +182,7 @@ export class PaymentService {
         observer.next({
           success: true,
           orderId: orderId,
-          message: 'Mock payment processed successfully'
+          message: 'Mock payment processed successfully (DEVELOPMENT ONLY)'
         });
         observer.complete();
       }, 2000);

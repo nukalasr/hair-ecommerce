@@ -32,11 +32,12 @@ export class CryptoUtil {
     );
 
     // Derive key using PBKDF2
+    // Using 600,000 iterations (OWASP 2023 recommendation, matches encryption strength)
     const hashBuffer = await crypto.subtle.deriveBits(
       {
         name: 'PBKDF2',
-        salt: saltBuffer,
-        iterations: 100000,
+        salt: saltBuffer as BufferSource,
+        iterations: 600000,  // Increased from 100k to modern security standards
         hash: 'SHA-256'
       },
       key,

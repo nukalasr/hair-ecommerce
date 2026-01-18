@@ -37,12 +37,8 @@
                 }
               ],
               "outputHashing": "all",
-              "sourceMap": {
-                "scripts": true,
-                "styles": false,
-                "vendor": true,
-                "hidden": true
-              }
+              "sourceMap": false,
+              "subresourceIntegrity": true
             },
             "development": {
               "buildOptimizer": false,
