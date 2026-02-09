@@ -172,8 +172,10 @@ export class AuthService {
               createdAt: demoUser.createdAt
             };
 
-            // Store user
-            this.secureStorage.setItem('currentUser', user);
+            // Store user (async, but we don't block on it)
+            this.secureStorage.setItem('currentUser', user).catch(err =>
+              console.error('Failed to store user:', err)
+            );
             this.currentUserSubject.next(user);
             this.isAuthenticatedSubject.next(true);
 
@@ -300,8 +302,10 @@ export class AuthService {
             createdAt: newDemoUser.createdAt
           };
 
-          // Auto-login after registration
-          this.secureStorage.setItem('currentUser', user);
+          // Auto-login after registration (async, but we don't block on it)
+          this.secureStorage.setItem('currentUser', user).catch(err =>
+            console.error('Failed to store user:', err)
+          );
           this.currentUserSubject.next(user);
           this.isAuthenticatedSubject.next(true);
 

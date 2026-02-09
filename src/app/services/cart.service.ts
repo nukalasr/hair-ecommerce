@@ -3,11 +3,20 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { Cart, CartItem } from '../models/cart.model';
 import { Product } from '../models/product.model';
 import { ValidationUtil } from '../utils/validation.util';
+import { SecureStorageService } from './secure-storage.service';
 
+/**
+ * Cart Service with Encrypted Storage
+ *
+ * SECURITY: Cart data is now encrypted in IndexedDB using non-extractable keys.
+ * This prevents XSS attacks from reading or modifying cart contents/prices.
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class CartService {
+  private readonly CART_KEY = 'encrypted_cart';
+
   private cart: Cart = {
     items: [],
     totalItems: 0,
@@ -17,22 +26,43 @@ export class CartService {
   private cartSubject = new BehaviorSubject<Cart>(this.cart);
   cart$ = this.cartSubject.asObservable();
 
-  constructor() {
-    // Load cart from localStorage if available
+  constructor(private secureStorage: SecureStorageService) {
+    // Load cart from encrypted storage
     this.loadCart();
   }
 
-  private loadCart(): void {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      this.cart = JSON.parse(savedCart);
+  /**
+   * Load cart from encrypted IndexedDB storage
+   * SECURITY: Uses AES-GCM encryption with non-extractable keys
+   */
+  private async loadCart(): Promise<void> {
+    try {
+      const savedCart = await this.secureStorage.getItem<Cart>(this.CART_KEY);
+      if (savedCart) {
+        this.cart = savedCart;
+        this.cartSubject.next(this.cart);
+      }
+    } catch (error) {
+      console.error('Error loading cart from secure storage:', error);
+      // If decryption fails, start with empty cart
+      this.cart = { items: [], totalItems: 0, totalPrice: 0 };
       this.cartSubject.next(this.cart);
     }
   }
 
-  private saveCart(): void {
-    localStorage.setItem('cart', JSON.stringify(this.cart));
-    this.cartSubject.next(this.cart);
+  /**
+   * Save cart to encrypted IndexedDB storage
+   * SECURITY: Uses AES-GCM encryption with non-extractable keys
+   */
+  private async saveCart(): Promise<void> {
+    try {
+      await this.secureStorage.setItem(this.CART_KEY, this.cart);
+      this.cartSubject.next(this.cart);
+    } catch (error) {
+      console.error('Error saving cart to secure storage:', error);
+      // Still update the subject so UI reflects changes
+      this.cartSubject.next(this.cart);
+    }
   }
 
   private calculateTotals(): void {
@@ -91,14 +121,15 @@ export class CartService {
     }
 
     this.calculateTotals();
-    this.saveCart();
+    // Save asynchronously (fire and forget - UI is already updated via subject)
+    this.saveCart().catch(err => console.error('Failed to persist cart:', err));
     return { success: true, message: 'Product added to cart' };
   }
 
   removeFromCart(productId: string): void {
     this.cart.items = this.cart.items.filter(item => item.product.id !== productId);
     this.calculateTotals();
-    this.saveCart();
+    this.saveCart().catch(err => console.error('Failed to persist cart:', err));
   }
 
   updateQuantity(productId: string, quantity: number): { success: boolean; message: string } {
@@ -120,7 +151,7 @@ export class CartService {
 
     item.quantity = quantity;
     this.calculateTotals();
-    this.saveCart();
+    this.saveCart().catch(err => console.error('Failed to persist cart:', err));
     return { success: true, message: 'Quantity updated' };
   }
 
@@ -130,7 +161,7 @@ export class CartService {
       totalItems: 0,
       totalPrice: 0
     };
-    this.saveCart();
+    this.saveCart().catch(err => console.error('Failed to persist cart:', err));
   }
 
   getItemCount(): number {

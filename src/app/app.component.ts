@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet, RouterModule } from '@angular/router';
 import { HeaderComponent } from './components/header/header.component';
 import { CookieConsentComponent } from './components/legal/cookie-consent.component';
+import { SecureStorageService } from './services/secure-storage.service';
 
 @Component({
   selector: 'app-root',
@@ -12,30 +13,41 @@ import { CookieConsentComponent } from './components/legal/cookie-consent.compon
 })
 export class AppComponent implements OnInit {
   title = 'Hair Bundles Ecommerce';
+  private secureStorage = inject(SecureStorageService);
 
   ngOnInit(): void {
-    // Clear old localStorage tokens (migration from localStorage to httpOnly cookies)
-    // This is a one-time cleanup for existing users
-    if (localStorage.getItem('currentUser') || localStorage.getItem('token') || localStorage.getItem('__device_key')) {
-      console.warn('🔒 Security Migration: Clearing old localStorage tokens');
-      console.warn('🔒 Authentication now uses secure httpOnly cookies');
+    // Migrate from old localStorage-based encryption to IndexedDB with non-extractable keys
+    this.migrateSecureStorage();
+  }
 
+  /**
+   * Migrate data from old localStorage-based encryption to secure IndexedDB storage
+   * SECURITY: New storage uses non-extractable CryptoKey - key material cannot be read by JavaScript
+   */
+  private async migrateSecureStorage(): Promise<void> {
+    const oldDeviceKey = localStorage.getItem('__device_key');
+
+    if (oldDeviceKey) {
+      // Migrate encrypted data to new secure storage
+      const keysToMigrate = ['currentUser', 'encrypted_orders'];
+      await this.secureStorage.migrateFromLocalStorage(keysToMigrate);
+    }
+
+    // Clean up any remaining old localStorage tokens
+    if (localStorage.getItem('currentUser') || localStorage.getItem('token')) {
       localStorage.removeItem('currentUser');
       localStorage.removeItem('token');
-      localStorage.removeItem('__device_key');
 
-      // Clear any other encrypted storage keys
-      const keysToRemove = [];
+      // Clear any other sensitive storage keys
+      const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('secure_') || key.includes('user') || key.includes('auth'))) {
+        if (key && (key.startsWith('secure_') || key.includes('auth'))) {
           keysToRemove.push(key);
         }
       }
 
       keysToRemove.forEach(key => localStorage.removeItem(key));
-
-      console.warn('✅ Migration complete - Please log in again');
     }
   }
 }

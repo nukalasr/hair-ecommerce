@@ -12,12 +12,15 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     // Create spy object for SecureStorageService
+    // All methods now return Promises since we migrated to IndexedDB
     const secureStorageSpy = jasmine.createSpyObj('SecureStorageService', [
       'setItem',
       'getItem',
       'removeItem'
     ]);
-    secureStorageSpy.getItem.and.returnValue(null); // Default: no stored user
+    secureStorageSpy.getItem.and.returnValue(Promise.resolve(null)); // Default: no stored user
+    secureStorageSpy.setItem.and.returnValue(Promise.resolve()); // Returns Promise<void>
+    secureStorageSpy.removeItem.and.returnValue(Promise.resolve()); // Returns Promise<void>
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],

@@ -2,6 +2,7 @@
  * Input validation and sanitization utilities
  * Protects against XSS, injection attacks, and invalid data
  */
+import DOMPurify from 'dompurify';
 
 export class ValidationUtil {
   // Email validation regex (RFC 5322 simplified)
@@ -148,55 +149,43 @@ export class ValidationUtil {
   }
 
   /**
-   * Sanitize HTML content (allows safe tags only)
+   * Sanitize HTML content using DOMPurify
    *
-   * WARNING: Regex-based HTML sanitization can be bypassed.
-   * This is a basic implementation for client-side validation.
+   * SECURITY: Uses DOMPurify library for robust XSS protection.
+   * DOMPurify is a trusted, well-maintained sanitization library
+   * that handles edge cases that regex-based approaches miss.
    *
-   * For production with HTML content:
-   * - Use DOMPurify library (npm install dompurify)
-   * - Use Angular's DomSanitizer service
-   * - Always sanitize server-side
-   * - Prefer plain text over HTML when possible
-   *
-   * @deprecated Use Angular's DomSanitizer or DOMPurify instead
+   * Configuration:
+   * - Allows safe formatting tags (p, b, i, em, strong, ul, ol, li, br)
+   * - Strips all event handlers and javascript: URLs
+   * - Removes dangerous elements (script, style, iframe, object, embed)
    */
   static sanitizeHtml(input: string): string {
     if (!input || typeof input !== 'string') return '';
 
-    console.warn('sanitizeHtml: Using regex-based sanitization. Consider using DOMPurify or Angular DomSanitizer for production.');
+    // DOMPurify configuration for safe HTML
+    const config = {
+      ALLOWED_TAGS: ['p', 'b', 'i', 'em', 'strong', 'u', 'ul', 'ol', 'li', 'br', 'a', 'span'],
+      ALLOWED_ATTR: ['href', 'title', 'class'],
+      ALLOW_DATA_ATTR: false,
+      FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+      RETURN_DOM: false,
+      RETURN_DOM_FRAGMENT: false,
+    };
 
-    let sanitized = input;
+    return DOMPurify.sanitize(input, config) as string;
+  }
 
-    // Remove dangerous tags and attributes
-    sanitized = sanitized
-      // Remove script tags with any content
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      // Remove iframe tags
-      .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-      // Remove object/embed tags
-      .replace(/<object[\s\S]*?<\/object>/gi, '')
-      .replace(/<embed[\s\S]*?>/gi, '')
-      // Remove link/meta/base tags
-      .replace(/<link[\s\S]*?>/gi, '')
-      .replace(/<meta[\s\S]*?>/gi, '')
-      .replace(/<base[\s\S]*?>/gi, '')
-      // Remove style tags
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      // Remove event handlers
-      .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
-      .replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '')
-      // Remove dangerous attributes
-      .replace(/\s*href\s*=\s*["']javascript:[^"']*["']/gi, '')
-      .replace(/\s*src\s*=\s*["']javascript:[^"']*["']/gi, '')
-      .replace(/\s*style\s*=\s*["'][^"']*expression[^"']*["']/gi, '');
+  /**
+   * Sanitize HTML and strip ALL tags (returns plain text)
+   * Use this when you don't need any HTML formatting
+   */
+  static sanitizeHtmlToText(input: string): string {
+    if (!input || typeof input !== 'string') return '';
 
-    // Only allow specific safe tags (strip all others)
-    // This is still bypassable - use DOMPurify for real protection
-    const div = document.createElement('div');
-    div.innerHTML = sanitized;
-
-    return sanitized;
+    // Strip all HTML tags
+    return DOMPurify.sanitize(input, { ALLOWED_TAGS: [], RETURN_DOM: false }) as string;
   }
 
   /**
